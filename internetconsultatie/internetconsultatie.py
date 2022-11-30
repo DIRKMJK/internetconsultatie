@@ -105,7 +105,11 @@ def extract_text(df, dir_attachments):
     for i, attachment_name in enumerate(df.attachment):
         if pd.notna(attachment_name) and attachment_name != '':
             path = dir_attachments / f'{int(attachment_name)}.pdf'
-            text_attachment = textract.process(path).decode('utf8')
+            try:
+                text_attachment = textract.process(path).decode('utf8')
+            except TypeError:
+                text_attachment = None
+                print('Failed to open', path.name)
             df.loc[i, 'text_attachment'] = text_attachment
     return df
 
