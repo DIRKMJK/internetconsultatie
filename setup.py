@@ -16,6 +16,6 @@ setup(name='internetconsultatie',
     license="MIT",
     packages=['internetconsultatie'],
     install_requires=[
-        'requests', 'pandas', 'bs4', 'nltk', 'textract', 'networkx'
+        'requests', 'pandas', 'bs4', 'nltk', 'textract', 'networkx', 'odfpy'
     ],
     zip_safe=False)
