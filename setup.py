@@ -6,7 +6,7 @@ README = (HERE / "readme.md").read_text()
 
 
 setup(name='internetconsultatie',
-    version='0.0.1',
+    version='0.0.2',
     description='Download metadata and individual responses of Dutch government online consultations',
     long_description=README,
     long_description_content_type="text/markdown",
