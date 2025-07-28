@@ -27,12 +27,12 @@ def get_url(item):
     return f'{BASE}{a.get("href")}'
 
 
-def get_next_link(soup):
-    """Extract link to next page, if exists"""
-    nxt = soup.find('li', class_='next')
-    if nxt:
-        return get_url(nxt)
-    return None
+# def get_next_link(soup):
+#     """Extract link to next page, if exists"""
+#     nxt = soup.find('li', class_='next')
+#     if nxt:
+#         return get_url(nxt)
+#     return None
 
 
 def get_result_urls(soup):
@@ -193,7 +193,7 @@ def download_responses(consultation, name=False, dir_responses='../data',
         dir_attachments = Path(dir_attachments)
     dir_responses.mkdir(exist_ok=True)
     dir_attachments.mkdir(exist_ok=True)
-    filename = f'responses_{consultation}.xlsx'
+    filename = f'responses_{consultation}.ods'
     path_responses = dir_responses / filename
     try:
         df = pd.read_excel(path_responses)
@@ -202,15 +202,17 @@ def download_responses(consultation, name=False, dir_responses='../data',
     except FileNotFoundError:
         done = []
         responses = []
-    nxt = f'{BASE}/{consultation}/reacties/datum/'
-    i = 0
-    while nxt:
-        if i % 10 == 0 and responses:
+    max_page = None
+    page = 1
+    while True:
+
+        if page % 10 == 0 and responses:
             df = pd.DataFrame(responses)
             df.to_excel(path_responses, index=False)
-            print(i, datetime.datetime.now().strftime('%H:%M:%S'))
+            print(page, datetime.datetime.now().strftime('%H:%M:%S'))
 
-        resp = requests.get(nxt)
+        url = f'{BASE}/{consultation}/reacties/datum/{page}'
+        resp = requests.get(url)
         html = resp.text
         soup_results = bs(html, 'lxml')
         result_urls = get_result_urls(soup_results)
@@ -219,8 +221,19 @@ def download_responses(consultation, name=False, dir_responses='../data',
             for url in result_urls
             if url not in done
         ])
-        nxt = get_next_link(soup_results)
-        i += 1
+        
+        page += 1
+        if not max_page:
+            pagination = soup_results.find('div', class_='pagination')
+            max_page = max([
+                int(a.text)
+                for a
+                in pagination.find_all('a')
+                if a.has_attr('href')
+            ])
+        if page > max_page:
+            break
+
         time.sleep(1)
     df = pd.DataFrame(responses)
     if extract_text_attachment or components:
@@ -269,7 +282,7 @@ def parse_consultation(url, save_html, dir_html):
     return consultation
 
 
-def download_consultations(path_consultations='../data/consultations.xlsx',
+def download_consultations(path_consultations='../data/consultations.ods',
                            save_html=False, dir_html='../data/html'):
     """Download metadata of past consultations
 
@@ -293,6 +306,8 @@ def download_consultations(path_consultations='../data/consultations.xlsx',
     while nxt:
         if i % 10 == 0 and consultations:
             df = pd.DataFrame(consultations)
+            with pd.ExcelWriter(path_consultations, options={'strings_to_urls': False}) as writer:
+                df.to_excel(writer, index=False)
             df.to_excel(path_consultations, index=False)
             print(i, datetime.datetime.now().strftime('%H:%M:%S'))
         resp = requests.get(nxt)
@@ -307,5 +322,6 @@ def download_consultations(path_consultations='../data/consultations.xlsx',
         i += 1
         time.sleep(0.5)
     df = pd.DataFrame(consultations)
-    df.to_excel(path_consultations, index=False)
+    with pd.ExcelWriter(path_consultations, options={'strings_to_urls': False}) as writer:
+        df.to_excel(writer, index=False)
     return df
